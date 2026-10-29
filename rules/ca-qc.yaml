@@ -1,0 +1,41 @@
+jurisdiction: CA-QC
+name: Quebec (in addition to Canada federal)
+inherits: [CA]
+sources:
+  - id: law25
+    title: Act respecting the protection of personal information in the private sector (as amended by Law 25)
+    url: https://www.legisquebec.gouv.qc.ca/en/document/cs/P-39.1
+  - id: charter-fr
+    title: Charter of the French Language
+    url: https://www.legisquebec.gouv.qc.ca/en/document/cs/C-11
+rules:
+  - id: qc.law25.automated_decision
+    source: law25
+    section: s.12.1
+    summary: If a decision about the person is based exclusively on automated processing, they must be informed and may ask for human review and for the factors used.
+    effect: require
+    modes: [autonomous]
+    obligation: automated_decision_notice
+    disclosure: "Decisions during this call may be made automatically; you can ask for a person to review them."
+
+  - id: qc.law25.purpose_notice
+    source: law25
+    section: s.8
+    summary: At collection, inform the person of the purposes, the means of collection, their rights of access/correction, and whether information may be sent outside Quebec.
+    effect: require
+    obligation: purpose_notice
+    disclosure: "We record this call to help our team and keep a record; details are in our privacy policy."
+
+  - id: qc.law25.transfer
+    source: law25
+    section: s.17
+    summary: Before sending personal information outside Quebec (e.g. inference or storage abroad) a privacy impact assessment is required.
+    effect: advise
+    obligation: pia_for_cross_border
+
+  - id: qc.french
+    source: charter-fr
+    summary: Consumers in Quebec have the right to be served in French; have a French script and model prompts available.
+    effect: advise
+    audiences: [consumer, unknown]
+    obligation: french_available

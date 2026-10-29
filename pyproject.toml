@@ -1,0 +1,38 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "callpilot"
+version = "0.1.0"
+description = "Private, always-on cold-call copilot with automatic legal/compliance reasoning (NVIDIA Nemotron on Nebius, sandboxed with NemoClaw/OpenShell)."
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi>=0.115,<1",
+    "uvicorn[standard]>=0.30,<1",
+    "pydantic>=2.7,<3",
+    "pydantic-settings>=2.3,<3",
+    "openai>=1.40,<2",
+    "phonenumbers>=8.13,<9",
+    "pyyaml>=6.0,<7",
+    "rank-bm25>=0.2.2,<1",
+    "websockets>=12,<16",
+]
+
+[project.optional-dependencies]
+speech = ["nvidia-riva-client>=2.17"]
+dev = ["pytest>=8", "pytest-asyncio>=0.23", "httpx>=0.27", "ruff>=0.5"]
+
+[project.scripts]
+callpilot = "callpilot.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"

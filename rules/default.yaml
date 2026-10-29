@@ -1,0 +1,55 @@
+jurisdiction: DEFAULT
+name: Baseline (applies everywhere unless overridden)
+sources:
+  - id: callpilot-policy
+    title: CallPilot internal policy (conservative defaults)
+rules:
+  - id: default.ai_disclosure
+    source: callpilot-policy
+    summary: Always tell the other party when an AI is speaking or generating the conversation.
+    text: >
+      Required by law in the EU (AI Act art. 50), California (B.O.T. Act) and Utah, and expected by
+      regulators everywhere as an anti-deception measure. Applied globally as policy.
+    effect: require
+    modes: [autonomous]
+    obligation: ai_disclosure
+    disclosure: "This call is handled by an AI assistant on behalf of {company}."
+
+  - id: default.recording_notice
+    source: callpilot-policy
+    summary: Disclose recording/transcription at the start of every recorded call.
+    text: >
+      Transcription by the copilot is a recording for privacy-law purposes (PIPEDA, Law 25, GDPR,
+      US two-party-consent states). Disclose before any substantive conversation.
+    effect: require
+    obligation: recording_notice
+    disclosure: "This call is being recorded and transcribed for quality and compliance."
+
+  - id: default.optout_honour
+    source: callpilot-policy
+    summary: If the prospect asks not to be called, stop immediately and add them to the internal DNCL.
+    effect: require
+    obligation: honour_optout
+
+  - id: default.no_unapproved_claims
+    source: callpilot-policy
+    summary: Only assert product facts from the approved-claims list; never invent prices, guarantees or results.
+    text: >
+      A false statement made by the AI is a misleading representation by the company
+      (Competition Act s.52 in Canada, FTC Act s.5 in the US, UCPD in the EU).
+    effect: restrict
+    obligation: approved_claims_only
+
+  - id: default.regulated_advice
+    source: callpilot-policy
+    summary: Do not give individual financial, insurance, medical or legal advice; hand off to a licensed human.
+    effect: restrict
+    sectors: [finance, insurance, health, legal]
+    obligation: no_regulated_advice
+    disclosure: "I can't give personal advice on this call; a licensed advisor will follow up."
+
+  - id: default.data_minimisation
+    source: callpilot-policy
+    summary: Store only what is needed for the stated purpose; set a retention period; delete recordings after transcription unless consent requires otherwise.
+    effect: advise
+    obligation: data_minimisation

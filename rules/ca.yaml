@@ -1,0 +1,121 @@
+jurisdiction: CA
+name: Canada (federal)
+sources:
+  - id: crtc-utr
+    title: CRTC Unsolicited Telecommunications Rules
+    url: https://www.crtc.gc.ca/eng/trules-reglest.htm
+  - id: crtc-key-rules
+    title: CRTC Key Unsolicited Telecommunications Rules (plain-language summary)
+    url: https://crtc.gc.ca/eng/phone/telemarketing/tobligations/rules-regles.htm
+  - id: pipeda
+    title: Personal Information Protection and Electronic Documents Act
+    url: https://laws-lois.justice.gc.ca/eng/acts/p-8.6/
+  - id: casl
+    title: Canada's Anti-Spam Legislation
+    url: https://crtc.gc.ca/eng/internet/anti.htm
+  - id: competition-act
+    title: Competition Act s.52 (false or misleading representations)
+    url: https://laws-lois.justice.gc.ca/eng/acts/c-34/section-52.html
+rules:
+  - id: ca.adad.consent
+    source: crtc-utr
+    section: Part IV s.2-3
+    summary: An automated/AI voice may not initiate a solicitation call without the consumer's prior express consent for automated calls to that specific number.
+    text: >
+      A telemarketer shall not initiate a telemarketing telecommunication via an ADAD unless express
+      consent has been provided by the consumer to receive a telemarketing telecommunication via an
+      ADAD from that telemarketer or its client. Express consent shall clearly evidence the consumer's
+      authorization and shall include the specific telecommunications number. Charities are not exempt.
+      A conversational AI agent that dials and speaks is treated as an ADAD.
+    effect: forbid
+    directions: [outbound]
+    modes: [autonomous]
+    purposes: [solicitation]
+    unless_consent: adad_express
+
+  - id: ca.adad.b2b_unclear
+    source: crtc-utr
+    section: Part IV s.2 (applied to businesses)
+    summary: The ADAD consent rule is written for "consumers"; its application to fully conversational AI calling businesses has no clear CRTC ruling. Treat as high-risk.
+    effect: advise
+    directions: [outbound]
+    modes: [autonomous]
+    audiences: [business, unknown]
+    confidence: unclear
+
+  - id: ca.adad.identify
+    source: crtc-utr
+    section: Part IV s.4
+    summary: Automated calls must begin by identifying on whose behalf the call is made and give a mailing address and a local or toll-free number.
+    effect: require
+    modes: [autonomous]
+    obligation: identify_caller_full
+    disclosure: "This is an automated call on behalf of {company}, {address}. You can reach us at {phone}."
+
+  - id: ca.dncl.register
+    source: crtc-utr
+    section: Part III s.2-3
+    summary: Telemarketers must be registered with the National DNCL operator before making solicitation calls.
+    effect: require
+    directions: [outbound]
+    purposes: [solicitation]
+    obligation: dncl_registration
+
+  - id: ca.dncl.scrub
+    source: crtc-key-rules
+    section: Part II
+    summary: Consumer numbers must be checked against the National DNCL using a list obtained no more than 31 days before the call. Does not apply to calls to businesses or to consumers with express consent / existing business relationship.
+    effect: require
+    directions: [outbound]
+    audiences: [consumer, unknown]
+    purposes: [solicitation]
+    obligation: dncl_scrub_31d
+
+  - id: ca.hours
+    source: crtc-utr
+    section: Part III s.24 / Part IV s.4(b)
+    summary: Solicitation calls only 9:00-21:30 on weekdays and 10:00-18:00 on weekends, in the recipient's local time (provincial law may be stricter).
+    effect: restrict
+    directions: [outbound]
+    purposes: [solicitation]
+    hours:
+      weekday: ["09:00", "21:30"]
+      weekend: ["10:00", "18:00"]
+
+  - id: ca.identify
+    source: crtc-key-rules
+    section: Part III
+    summary: At the start of a call identify the caller, the company and the purpose; display a callable caller-ID; provide contact information on request.
+    effect: require
+    directions: [outbound]
+    purposes: [solicitation]
+    obligation: identify_caller
+    disclosure: "Hi, this is {rep} calling from {company}."
+
+  - id: ca.pipeda.recording
+    source: pipeda
+    section: Schedule 1, Principles 2-3 (Identifying Purposes, Consent)
+    summary: Recording or transcribing the call collects personal information; the purpose must be stated and consent obtained at or before collection.
+    effect: require
+    obligation: recording_notice
+
+  - id: ca.casl.followup
+    source: casl
+    summary: Follow-up emails/SMS are commercial electronic messages and need express or implied consent (an inquiry during the call gives implied consent for 6 months).
+    effect: advise
+    obligation: casl_followup_consent
+
+  - id: ca.competition.claims
+    source: competition-act
+    section: s.52
+    summary: Knowingly or recklessly making a materially false or misleading representation to promote a product is an offence; the company is liable for the AI's statements.
+    effect: restrict
+    obligation: approved_claims_only
+
+  - id: ca.records
+    source: crtc-utr
+    section: Part III s.5 and s.27
+    summary: Keep consent, DNCL and call records for three years.
+    effect: require
+    directions: [outbound]
+    obligation: retain_records_3y

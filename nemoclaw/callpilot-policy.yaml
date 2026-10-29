@@ -1,0 +1,61 @@
+# OpenShell sandbox policy for the CallPilot agent (Hermes harness via NemoClaw).
+#
+# Intent (adapt field names to the OpenShell version you run; start from
+# nemoclaw-blueprint/policies/presets and layer this on top):
+#   - inference only via the gateway-attached Nebius provider (placeholder credential rewritten at egress)
+#   - optional egress to the telephony provider and a local Riva/Parakeet ASR NIM
+#   - everything else denied: prospect data never leaves the sandbox except as prompts to inference
+#   - persistent state (memory.sqlite, audit/*.jsonl, internal_dncl.txt) on a volume under /sandbox
+version: 1
+name: callpilot
+description: Cold-call copilot with legal reasoning; data stays local, inference via Nebius.
+
+network:
+  default: deny
+  allow:
+    - name: nebius-inference
+      host: api.tokenfactory.nebius.com
+      port: 443
+      methods: [POST]
+      paths: ["/v1/chat/completions", "/v1/models"]
+      credential: nebius            # registered with `openshell provider` during onboarding
+      inject:
+        header: Authorization
+        format: "Bearer {secret}"
+    - name: riva-asr
+      host: riva.local              # local Parakeet / Nemotron-ASR NIM, gRPC
+      port: 50051
+    - name: telephony
+      host: api.twilio.com
+      port: 443
+      methods: [GET, POST]
+      credential: twilio
+      inject:
+        header: Authorization
+        format: "Basic {secret}"
+  deny_private_networks: true       # SSRF guard, except the explicit riva.local entry
+
+filesystem:
+  read_write:
+    - /sandbox/callpilot/data       # memory, audit log, internal DNCL (mount a volume here)
+    - /tmp
+  read_only:
+    - /sandbox/callpilot/rules      # legal rule KB; edits go through git, not the agent
+  deny:
+    - /sandbox/callpilot/.env
+
+process:
+  allow: [python3, callpilot, uvicorn]
+  deny_shell_escape: true
+
+inference:
+  profile: nebius
+  routes:
+    fast: nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B
+    slow: nvidia/Nemotron-3-Ultra-550b-a55b
+
+integrations:
+  mcp:
+    - name: callpilot-tools
+      command: ["python3", "-m", "callpilot.tools.mcp_server"]
+      description: compliance_check_call, compliance_ask, memory_*, audit_get_call

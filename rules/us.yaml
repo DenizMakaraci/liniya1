@@ -1,0 +1,59 @@
+jurisdiction: US
+name: United States (federal)
+sources:
+  - id: tcpa
+    title: Telephone Consumer Protection Act, 47 U.S.C. 227 and 47 CFR 64.1200
+    url: https://www.ecfr.gov/current/title-47/chapter-I/subchapter-B/part-64/subpart-L/section-64.1200
+  - id: fcc-ai-ruling
+    title: 'FCC Declaratory Ruling (Feb 2024): AI-generated voices are "artificial" under the TCPA'
+    url: https://docs.fcc.gov/public/attachments/FCC-24-17A1.pdf
+  - id: tsr
+    title: FTC Telemarketing Sales Rule, 16 CFR 310
+    url: https://www.ecfr.gov/current/title-16/chapter-I/subchapter-C/part-310
+rules:
+  - id: us.tcpa.ai_voice
+    source: fcc-ai-ruling
+    summary: Calls using an AI-generated voice are "artificial or prerecorded voice" calls; to a residential or mobile line for marketing they require prior express written consent.
+    effect: forbid
+    directions: [outbound]
+    modes: [autonomous]
+    purposes: [solicitation]
+    unless_consent: written_express
+
+  - id: us.tcpa.hours
+    source: tcpa
+    section: 64.1200(c)(1)
+    summary: No telephone solicitations before 8 a.m. or after 9 p.m. local time of the called party.
+    effect: restrict
+    directions: [outbound]
+    purposes: [solicitation]
+    hours:
+      weekday: ["08:00", "21:00"]
+      weekend: ["08:00", "21:00"]
+
+  - id: us.dnc.scrub
+    source: tsr
+    section: 310.4(b)(1)(iii)
+    summary: Scrub against the National Do Not Call Registry at least every 31 days; honour company-specific do-not-call requests.
+    effect: require
+    directions: [outbound]
+    audiences: [consumer, unknown]
+    purposes: [solicitation]
+    obligation: dncl_scrub_31d
+
+  - id: us.tsr.identify
+    source: tsr
+    section: 310.4(d)
+    summary: Promptly disclose the seller's identity, that the purpose is to sell, and the nature of the goods.
+    effect: require
+    directions: [outbound]
+    purposes: [solicitation]
+    obligation: identify_caller
+    disclosure: "Hi, this is {rep} from {company}. I'm calling about {product}."
+
+  - id: us.recording.two_party
+    source: tcpa
+    summary: Roughly a dozen states (CA, FL, IL, MD, MA, MT, NH, PA, WA, ...) require all-party consent to record; disclose recording in every US call.
+    effect: require
+    obligation: recording_notice
+    confidence: likely

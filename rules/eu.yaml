@@ -1,0 +1,55 @@
+jurisdiction: EU
+name: European Union (baseline; member states vary)
+sources:
+  - id: eprivacy
+    title: ePrivacy Directive 2002/58/EC art. 13 (unsolicited communications)
+    url: https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32002L0058
+  - id: gdpr
+    title: General Data Protection Regulation
+    url: https://eur-lex.europa.eu/eli/reg/2016/679/oj
+  - id: ai-act
+    title: EU AI Act art. 50 (transparency obligations)
+    url: https://eur-lex.europa.eu/eli/reg/2024/1689/oj
+rules:
+  - id: eu.eprivacy.automated
+    source: eprivacy
+    section: art. 13(1)
+    summary: Automated calling systems without human intervention may be used for direct marketing only with prior consent.
+    effect: forbid
+    directions: [outbound]
+    modes: [autonomous]
+    purposes: [solicitation]
+    unless_consent: express
+
+  - id: eu.eprivacy.human_calls
+    source: eprivacy
+    section: art. 13(3)
+    summary: Human marketing calls are opt-in or opt-out depending on the member state (opt-in in DE, AT, NL, DK, ...; opt-out with registry in FR, UK, IE, ...). Check the national rule.
+    effect: advise
+    directions: [outbound]
+    modes: [human]
+    audiences: [consumer, unknown]
+    confidence: unclear
+
+  - id: eu.ai_act.disclosure
+    source: ai-act
+    section: art. 50(1)
+    summary: Persons interacting with an AI system must be informed, unless obvious from context.
+    effect: require
+    modes: [autonomous]
+    obligation: ai_disclosure
+    disclosure: "You are speaking with an AI assistant acting for {company}."
+
+  - id: eu.gdpr.recording
+    source: gdpr
+    section: art. 6, 13
+    summary: Recording/transcription needs a lawful basis and the data subject must be informed at collection.
+    effect: require
+    obligation: recording_notice
+
+  - id: eu.gdpr.transfer
+    source: gdpr
+    section: ch. V
+    summary: Keep processing (inference, storage) inside the EU/EEA or under an adequacy decision/SCCs.
+    effect: advise
+    obligation: eu_data_residency
