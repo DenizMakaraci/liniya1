@@ -113,14 +113,16 @@ JUDGE_SYSTEM = (
 def make_llm_judge(client, model: str):
     async def judge(text: str, approved: list[str]) -> dict:
         msg = "Approved facts:\n- " + "\n- ".join(approved) + f"\n\nProposed sentence: {text}"
-        resp = await client.chat.completions.create(
-            model=model, temperature=0, max_tokens=200,
-            response_format={"type": "json_object"},
+        from ..llm.client import complete
+
+        raw = await complete(
+            client, model, think=False, temperature=0, max_tokens=200,
             messages=[{"role": "system", "content": JUDGE_SYSTEM}, {"role": "user", "content": msg}],
         )
+        m = re.search(r"\{.*\}", raw, re.S)  # tolerate prose or code fences around the JSON
         try:
-            return json.loads(resp.choices[0].message.content)
-        except (json.JSONDecodeError, IndexError):
+            return json.loads(m.group(0)) if m else {"grounded": False, "reason": "judge returned no JSON"}
+        except json.JSONDecodeError:
             return {"grounded": False, "reason": "judge returned invalid JSON"}
 
     return judge

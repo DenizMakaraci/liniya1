@@ -3,6 +3,7 @@ inside the audio loop. Produces the call brief and refreshes it as the conversat
 """
 
 from ..config import settings
+from .client import complete
 
 BRIEF_SYSTEM = """You prepare a concise call brief for a sales rep. Use ONLY the provided prospect
 memory and approved product facts. Output sections: Goal, Prospect context (3 bullets max),
@@ -21,11 +22,10 @@ class SlowPath:
     async def _run(self, system: str, user: str, max_tokens: int = 700) -> str:
         if self.client is None:
             return "(no LLM configured) Goal: book a 15-minute demo. Ask about current scheduling pain."
-        resp = await self.client.chat.completions.create(
-            model=self.model, temperature=0.2, max_tokens=max_tokens,
+        return await complete(
+            self.client, self.model, think=True, temperature=0.2, max_tokens=max_tokens,
             messages=[{"role": "system", "content": system}, {"role": "user", "content": user}],
         )
-        return resp.choices[0].message.content.strip()
 
     async def build_brief(self, prospect_memory: str, approved_claims: list[str],
                           compliance_notes: str) -> str:

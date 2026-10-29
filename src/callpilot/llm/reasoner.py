@@ -14,6 +14,7 @@ from rank_bm25 import BM25Okapi
 from ..compliance.engine import CallPolicy
 from ..compliance.rules import Rule, RuleBook
 from ..config import settings
+from .client import complete
 
 SYSTEM = """You are a telemarketing-compliance analyst. Answer using ONLY the numbered rules provided.
 Cite rules inline as [rule-id]. If the rules do not settle the question, say so explicitly and
@@ -75,13 +76,12 @@ class LegalReasoner:
         if policy:
             extra = (f"\n\nEngine decision for this call: allowed={policy.allowed}; "
                      f"blocking={policy.blocking_reasons}; open_questions={policy.open_questions}")
-        resp = await self.client.chat.completions.create(
-            model=self.model, temperature=0.1, max_tokens=600,
+        answer = await complete(
+            self.client, self.model, think=True, temperature=0.1, max_tokens=600,
             messages=[{"role": "system", "content": SYSTEM},
                       {"role": "user", "content": f"RULES:\n{ctx}{extra}\n\nQUESTION: {question}"}],
         )
-        return LegalAnswer(question=question, answer=resp.choices[0].message.content.strip(),
-                           citations=cites, settled=settled)
+        return LegalAnswer(question=question, answer=answer, citations=cites, settled=settled)
 
     async def explain_policy(self, policy: CallPolicy) -> LegalAnswer:
         q = ("Explain to the sales rep, in plain language, why this call is "
