@@ -12,7 +12,7 @@ in the caller's jurisdiction forbids - while every byte of customer data stays o
 | Requirement | Where |
 |---|---|
 | **Runtime calls to Nebius Token Factory** | Every LLM call goes through the OpenAI-compatible client in `src/callpilot/llm/client.py` to `https://api.tokenfactory.nebius.com/v1/`. The CLI prints the provider on every run (`[callpilot] inference: Nebius Token Factory`). |
-| **NVIDIA open model** | `nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B` (Nemotron 3, 30B MoE / 3B active) for *everything*: whispers, inbound replies, guardrail judge, briefs (thinking off) and the legal reasoner (thinking on). Model IDs are env vars; Super/Ultra are one-line upgrades. |
+| **NVIDIA open model** | `nvidia/Nemotron-3_5-Lightning` (Nemotron 3, 30B MoE / 3B active) for *everything*: whispers, inbound replies, guardrail judge, briefs (thinking off) and the legal reasoner (thinking on). Model IDs are env vars; Super/Ultra are one-line upgrades. |
 | **NVIDIA NemoClaw / OpenShell** | `nemoclaw/Dockerfile` + `nemoclaw/callpilot-policy.yaml`: sandbox with deny-all egress except Token Factory, API key injected by the gateway, rw only on `data/`. |
 | **Hermes Agent** | `src/callpilot/tools/` exposes 8 tools (compliance gate, legal Q&A, memory, knowledge, audit) as OpenAI function schemas and a stdio MCP server, so a Hermes agent must pass the gate before it dials. |
 | **NVIDIA speech (Parakeet / Magpie)** | Riva adapters in `src/callpilot/call/asr.py`, `tts.py` (mock used in the demo). |
@@ -71,7 +71,7 @@ reasoner / a human instead of silently deciding.
   thinking **off** for whispers, replies, the guardrail judge, briefs and summaries (~2 s for a brief,
   ~400 ms TTFT), thinking **on** for the legal reasoner only (~7-12 s, off the call path).
 - Served via any OpenAI-compatible endpoint: build.nvidia.com (free tier) or Nebius Token Factory
-  (`nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B`, zero retention, EU). Larger Nemotron (Super/Ultra) is a
+  (`nvidia/Nemotron-3_5-Lightning`, zero retention, EU). Larger Nemotron (Super/Ultra) is a
   one-line upgrade for the reasoner on a dedicated endpoint; on the free tier Super VL with thinking
   measured ~108 s per brief, so it is not the default.
 

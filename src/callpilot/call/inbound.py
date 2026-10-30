@@ -121,8 +121,9 @@ class InboundSession:
         if self.outcome:
             return
         self.outcome = outcome or "completed"
+        me = asyncio.current_task()
         for t in (self._speaking, self._silence_task):
-            if t:
+            if t and t is not me:
                 t.cancel()
         await self.asr.close()
         summary = await self.slow.summarize(self.transcript) if self.transcript else "(no transcript)"

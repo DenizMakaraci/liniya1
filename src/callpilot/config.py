@@ -18,8 +18,8 @@ class Settings(BaseSettings):
     # replies, judge, briefs), thinking on for the legal reasoner. Defaults are Nebius Token Factory
     # model IDs (hackathon requirement: runtime calls go to Nebius). Swap slow_model for Super/Ultra
     # on a dedicated endpoint when latency allows.
-    fast_model: str = "nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B"
-    slow_model: str = "nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B"
+    fast_model: str = "nvidia/Nemotron-3_5-Lightning"
+    slow_model: str = "nvidia/Nemotron-3_5-Lightning"
 
     @property
     def provider(self) -> str:

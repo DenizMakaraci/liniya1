@@ -34,8 +34,12 @@ Rules:
 - Before offering a callback, ask for permission and the best number; only treat it as agreed when the
   caller clearly says yes.
 
-Control tags: append exactly one of [HANDOFF], [CALLBACK_OK] or [END] at the very end of your reply
-when applicable; otherwise append nothing."""
+Control tags, appended at the very end of your reply only when the condition is met:
+- [HANDOFF] only if the caller asked for a person, needs licensed advice, is upset, or you could not
+  answer twice in a row. Correcting a wrong claim with an approved fact is NOT a handoff.
+- [CALLBACK_OK] only if the caller clearly agreed to a callback you asked permission for.
+- [END] only if the caller is saying goodbye.
+Otherwise append nothing."""
 
 
 class Speaker:

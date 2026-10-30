@@ -69,7 +69,7 @@ retrieval, a rep-facing web UI, and counsel review of the rule base.
 
 - **Nebius Token Factory**: all inference, `https://api.tokenfactory.nebius.com/v1/`, OpenAI-compatible
   client (`src/callpilot/llm/client.py`). The CLI prints the provider on every run.
-- **NVIDIA Nemotron 3 Nano 30B-A3B** (`nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B`): fast path with
+- **NVIDIA Nemotron 3 Nano 30B-A3B** (`nvidia/Nemotron-3_5-Lightning`): fast path with
   `enable_thinking: false` (whispers, inbound replies, guardrail judge, call briefs, summaries); legal
   reasoner with thinking on. Model IDs are environment variables; Super/Ultra are drop-in.
 - **NVIDIA NemoClaw / OpenShell**: `nemoclaw/Dockerfile` and `nemoclaw/callpilot-policy.yaml` -
