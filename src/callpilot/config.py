@@ -14,8 +14,11 @@ class Settings(BaseSettings):
     nebius_api_key: str = Field("", validation_alias=AliasChoices("NEBIUS_API_KEY", "NVIDIA_API_KEY", "CALLPILOT_API_KEY"))
     nebius_base_url: str = Field("https://api.tokenfactory.nebius.com/v1/",
                                  validation_alias=AliasChoices("NEBIUS_BASE_URL", "CALLPILOT_BASE_URL"))
-    fast_model: str = "nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B"
-    slow_model: str = "nvidia/Nemotron-3-Ultra-550b-a55b"
+    # One 3B-active hybrid-reasoning model for everything: thinking off on the live path (whispers,
+    # replies, judge, briefs), thinking on for the legal reasoner. Swap slow_model for a larger
+    # Nemotron on a dedicated endpoint when latency allows.
+    fast_model: str = "nvidia/nemotron-3.5-lightning-30b-a3b"
+    slow_model: str = "nvidia/nemotron-3.5-lightning-30b-a3b"
 
     riva_server: str = Field("", validation_alias=AliasChoices("RIVA_SERVER", "CALLPILOT_RIVA_SERVER"))
 

@@ -35,9 +35,13 @@ reasoner / a human instead of silently deciding.
  after call:   summary -> prospect memory (SQLite) ; audit JSONL ; retention purge
 ```
 
-- Fast path: `nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B`, thinking disabled, streaming, max 80 tokens.
-- Slow path: `nvidia/Nemotron-3-Ultra-550b-a55b` for the brief, refreshes, summary and legal reasoning.
-- Both via the OpenAI-compatible endpoint `https://api.tokenfactory.nebius.com/v1/` (zero retention, EU).
+- One open model, `nvidia/nemotron-3.5-lightning-30b-a3b` (30B MoE, 3B active), does everything:
+  thinking **off** for whispers, replies, the guardrail judge, briefs and summaries (~2 s for a brief,
+  ~400 ms TTFT), thinking **on** for the legal reasoner only (~7-12 s, off the call path).
+- Served via any OpenAI-compatible endpoint: build.nvidia.com (free tier) or Nebius Token Factory
+  (`nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B`, zero retention, EU). Larger Nemotron (Super/Ultra) is a
+  one-line upgrade for the reasoner on a dedicated endpoint; on the free tier Super VL with thinking
+  measured ~108 s per brief, so it is not the default.
 
 ## Quick start
 

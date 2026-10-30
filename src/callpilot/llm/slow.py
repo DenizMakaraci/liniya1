@@ -32,11 +32,11 @@ class SlowPath:
         user = (f"PROSPECT MEMORY:\n{prospect_memory or '(first contact)'}\n\n"
                 f"APPROVED FACTS:\n- " + "\n- ".join(approved_claims) +
                 f"\n\nCOMPLIANCE NOTES:\n{compliance_notes}")
-        return await self._run(BRIEF_SYSTEM, user)
+        return await self._run(BRIEF_SYSTEM, user, think=False)
 
     async def refresh_brief(self, brief: str, transcript: list[dict]) -> str:
         turns = "\n".join(f"{t['speaker'].upper()}: {t['text']}" for t in transcript)
-        return await self._run(REFRESH_SYSTEM, f"CURRENT BRIEF:\n{brief}\n\nTRANSCRIPT:\n{turns}")
+        return await self._run(REFRESH_SYSTEM, f"CURRENT BRIEF:\n{brief}\n\nTRANSCRIPT:\n{turns}", think=False)
 
     async def summarize(self, transcript: list[dict]) -> str:
         turns = "\n".join(f"{t['speaker'].upper()}: {t['text']}" for t in transcript)
