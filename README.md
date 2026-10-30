@@ -1,12 +1,44 @@
 # CallPilot
 
-A private, always-on cold-call copilot that **reasons about the law before, during and after every
-call**. A human rep dials and speaks; the AI listens, whispers what to say next, and refuses to let
-the call happen if it would be unlawful in the prospect's jurisdiction.
+**The phone assistant that knows the law.** A private, always-on AI for business phone calls: it
+coaches your reps on outbound calls, answers your inbound line, and refuses to do anything the law
+in the caller's jurisdiction forbids - while every byte of customer data stays on your machine.
 
-Built for the Personal AI track: NVIDIA Nemotron (open weights) served on Nebius Token Factory,
-sandboxed with NVIDIA NemoClaw / OpenShell, exposed to a Hermes Agent as tools, with all prospect
-data kept locally.
+> **Nebius x NVIDIA Global AI Hackathon - Personal AI Track.** License: MIT.
+> Demo video: _add YouTube link_ · Fictional demo data throughout.
+
+## How NVIDIA and Nebius are used
+
+| Requirement | Where |
+|---|---|
+| **Runtime calls to Nebius Token Factory** | Every LLM call goes through the OpenAI-compatible client in `src/callpilot/llm/client.py` to `https://api.tokenfactory.nebius.com/v1/`. The CLI prints the provider on every run (`[callpilot] inference: Nebius Token Factory`). |
+| **NVIDIA open model** | `nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B` (Nemotron 3, 30B MoE / 3B active) for *everything*: whispers, inbound replies, guardrail judge, briefs (thinking off) and the legal reasoner (thinking on). Model IDs are env vars; Super/Ultra are one-line upgrades. |
+| **NVIDIA NemoClaw / OpenShell** | `nemoclaw/Dockerfile` + `nemoclaw/callpilot-policy.yaml`: sandbox with deny-all egress except Token Factory, API key injected by the gateway, rw only on `data/`. |
+| **Hermes Agent** | `src/callpilot/tools/` exposes 8 tools (compliance gate, legal Q&A, memory, knowledge, audit) as OpenAI function schemas and a stdio MCP server, so a Hermes agent must pass the gate before it dials. |
+| **NVIDIA speech (Parakeet / Magpie)** | Riva adapters in `src/callpilot/call/asr.py`, `tts.py` (mock used in the demo). |
+
+### Persistent memory · reusable skills · your data, your control
+Prospect memory and consent evidence in local SQLite; skills as MCP tools; approved facts, knowledge
+docs and the legal rule base as read-only files; audit trail as JSONL; `callpilot forget` for erasure.
+
+## Quick start (judges: ~3 minutes)
+
+```bash
+git clone <repo> && cd callpilot
+python3 -m venv .venv && .venv/bin/pip install -e ".[dev]"
+cp .env.example .env         # paste your Nebius Token Factory key (promo code NEBIUS-DEVPOST-GLOBAL26)
+./scripts/demo-reset.sh      # fictional company, contacts, suppression list
+.venv/bin/callpilot models   # confirm Nemotron is reachable on Nebius
+
+.venv/bin/callpilot check +15145550123 --mode autonomous --audience consumer      # BLOCKED, with CRTC citations
+.venv/bin/callpilot ask "Can an AI call businesses in Canada without consent?" --jurisdiction CA
+.venv/bin/callpilot inbound-demo +16045550142 --script callback                   # AI answers the phone
+.venv/bin/callpilot inbound-demo +16045550199 --script optout && .venv/bin/callpilot check +16045550199 --scrubbed
+.venv/bin/python -m pytest -q                                                      # 43 tests, no key needed
+```
+
+Without a key everything still runs in a labelled offline mode (deterministic gate, rule listing,
+canned replies) so the compliance logic can be inspected at zero cost.
 
 > Not legal advice. The rule knowledge base is a starting point written from public regulator
 > sources; have counsel review it before production use.

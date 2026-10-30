@@ -176,6 +176,24 @@ async def cmd_inbound_demo(a):
     return 0
 
 
+def banner():
+    key = "set" if settings.nebius_api_key else "MISSING (offline mode)"
+    print(f"[callpilot] inference: {settings.provider} | model: {settings.fast_model} | key {key}\n")
+
+
+async def cmd_models(a):
+    c = get_client()
+    if c is None:
+        print("no API key configured")
+        return 1
+    models = await c.models.list()
+    ids = sorted(m.id for m in models.data if "nemotron" in m.id.lower() or a.all)
+    print(f"{settings.provider}: {len(ids)} model(s)")
+    for i in ids:
+        print(" ", i)
+    return 0
+
+
 def cmd_import(a):
     from pathlib import Path
 
@@ -267,6 +285,9 @@ def main(argv=None):
     f = sub.add_parser("forget", help="erase a prospect from memory (right to erasure)")
     f.add_argument("number")
 
+    m = sub.add_parser("models", help="list Nemotron models reachable with the configured key")
+    m.add_argument("--all", action="store_true")
+
     s = sub.add_parser("serve")
     s.add_argument("--host", default="127.0.0.1")
     s.add_argument("--port", type=int, default=8000)
@@ -276,7 +297,10 @@ def main(argv=None):
     sync = {"serve": cmd_serve, "import": cmd_import, "knowledge": cmd_knowledge, "forget": cmd_forget}
     if a.cmd in sync:
         return sync[a.cmd](a)
-    cmds = {"check": cmd_check, "ask": cmd_ask, "demo": cmd_demo, "inbound-demo": cmd_inbound_demo}
+    if a.cmd != "check" or getattr(a, "explain", False):
+        banner()
+    cmds = {"check": cmd_check, "ask": cmd_ask, "demo": cmd_demo, "inbound-demo": cmd_inbound_demo,
+            "models": cmd_models}
     return asyncio.run(cmds[a.cmd](a))
 
 
