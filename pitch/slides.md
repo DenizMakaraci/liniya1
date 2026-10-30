@@ -11,7 +11,7 @@ style: |
   .small { font-size: 18px; color: #555; }
 ---
 
-# CallPilot
+# Liniya
 
 ## The phone assistant that knows the law
 
@@ -207,7 +207,7 @@ Live phone via Twilio + Riva · French mode for Quebec · semantic retrieval (ne
 
 Most "AI phone agent" demos would be **illegal to run** in Canada, the US or the EU the moment they dial a real consumer.
 
-CallPilot is the version a compliance officer would sign off on:
+Liniya is the version a compliance officer would sign off on:
 it knows which calls it may make, says what the law requires, says only what the company approved, remembers who said no - and proves all of it in a file you can read.
 
 **Private. Always on. Knows the law.**

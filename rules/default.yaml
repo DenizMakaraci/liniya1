@@ -2,7 +2,7 @@ jurisdiction: DEFAULT
 name: Baseline (applies everywhere unless overridden)
 sources:
   - id: callpilot-policy
-    title: CallPilot internal policy (conservative defaults)
+    title: Liniya internal policy (conservative defaults)
 rules:
   - id: default.ai_disclosure
     source: callpilot-policy

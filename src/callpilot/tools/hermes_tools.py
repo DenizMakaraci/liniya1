@@ -1,5 +1,5 @@
 """Tool definitions (OpenAI function-calling schema) so a Hermes Agent / OpenClaw running inside
-NemoClaw can use CallPilot as skills: check compliance before dialing, ask legal questions, read
+NemoClaw can use Liniya as skills: check compliance before dialing, ask legal questions, read
 and write prospect memory, and pull the audit trail. `dispatch()` executes a call by name.
 
 Mount as an MCP server or import directly; every tool is local, no network egress needed.

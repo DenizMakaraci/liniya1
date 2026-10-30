@@ -23,7 +23,7 @@ from .config import settings
 from .knowledge import import_contacts, import_suppression, load_kb, load_profile
 from .llm import LegalReasoner, get_client
 
-app = FastAPI(title="CallPilot", version="0.1.0")
+app = FastAPI(title="Liniya", version="0.1.0")
 rulebook = load_rulebook(settings.rules_dir)
 memory = ProspectMemory(settings.data_dir)
 client = get_client()

@@ -178,7 +178,7 @@ async def cmd_inbound_demo(a):
 
 def banner():
     key = "set" if settings.nebius_api_key else "MISSING (offline mode)"
-    print(f"[callpilot] inference: {settings.provider} | model: {settings.fast_model} | key {key}\n")
+    print(f"[liniya] inference: {settings.provider} | model: {settings.fast_model} | key {key}\n")
 
 
 async def cmd_models(a):

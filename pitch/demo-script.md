@@ -1,4 +1,4 @@
-# CallPilot - demo runbook (6-7 minutes)
+# Liniya - demo runbook (6-7 minutes)
 
 ## Before you walk up
 

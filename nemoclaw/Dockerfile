@@ -1,5 +1,5 @@
 # Custom sandbox image for `nemoclaw onboard --from nemoclaw/Dockerfile` (Hermes Agent harness).
-# CallPilot is installed as a local tool package; state lives in /sandbox (the only rw path
+# Liniya is installed as a local tool package; state lives in /sandbox (the only rw path
 # besides /tmp under OpenShell's filesystem policy).
 FROM python:3.12-slim
 

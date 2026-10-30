@@ -1,4 +1,4 @@
-"""Minimal MCP (Model Context Protocol) stdio server exposing CallPilot tools to Hermes/OpenClaw.
+"""Minimal MCP (Model Context Protocol) stdio server exposing Liniya tools to Hermes/OpenClaw.
 
 Implements just `initialize`, `tools/list` and `tools/call` over newline-delimited JSON-RPC 2.0,
 which is all a NemoClaw-managed MCP integration needs. Run: python -m callpilot.tools.mcp_server

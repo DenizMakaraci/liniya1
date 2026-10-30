@@ -1,4 +1,6 @@
-# CallPilot
+# Liniya
+
+Private phone assistant that knows the law. (Python package and CLI: `callpilot`.)
 
 **The phone assistant that knows the law.** A private, always-on AI for business phone calls: it
 coaches your reps on outbound calls, answers your inbound line, and refuses to do anything the law

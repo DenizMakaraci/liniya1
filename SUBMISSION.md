@@ -10,7 +10,7 @@ feedback. Everything in English.
 Personal AI Track
 
 ## Project name
-CallPilot - the phone assistant that knows the law
+Liniya - the phone assistant that knows the law
 
 ## Tagline (≤ 60 chars)
 Private AI for business calls that reasons about the law
@@ -23,7 +23,7 @@ phone-agent demos would be unlawful the moment they dial a real consumer - and t
 model, is liable for every hallucinated price. Sales teams want AI on calls; compliance teams say no.
 Both are right. We built the assistant a compliance officer would sign off on.
 
-**What it does.** CallPilot is an always-on, private phone assistant with two modes on one brain:
+**What it does.** Liniya is an always-on, private phone assistant with two modes on one brain:
 a *copilot* that whispers to a human rep on outbound calls, and an *inbound agent* that answers the
 company line. Before any call it detects the jurisdiction from the phone number and decides whether
 the call may happen and what must be said first (Canada, Quebec/Law 25, US/TCPA, EU). During the

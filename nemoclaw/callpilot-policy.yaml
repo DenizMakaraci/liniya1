@@ -1,4 +1,4 @@
-# OpenShell sandbox policy for the CallPilot agent (Hermes harness via NemoClaw).
+# OpenShell sandbox policy for the Liniya agent (Hermes harness via NemoClaw).
 #
 # Intent (adapt field names to the OpenShell version you run; start from
 # nemoclaw-blueprint/policies/presets and layer this on top):
