@@ -33,7 +33,7 @@ class AuditLog:
         self.event("disclosure_made", obligation=obligation, text=text, by=by)
 
     def consent_captured(self, consent) -> None:
-        self.event("consent_captured", **consent.model_dump())
+        self.event("consent_captured", consent=consent.model_dump())
 
     def guardrail(self, result, original: str) -> None:
         self.event("guardrail", allowed=result.allowed, violations=result.violations,

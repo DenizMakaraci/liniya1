@@ -119,7 +119,7 @@ def make_llm_judge(client, model: str):
             client, model, think=False, temperature=0, max_tokens=200,
             messages=[{"role": "system", "content": JUDGE_SYSTEM}, {"role": "user", "content": msg}],
         )
-        m = re.search(r"\{.*\}", raw, re.S)  # tolerate prose or code fences around the JSON
+        m = re.search(r"\{.*\}", raw, re.DOTALL)  # tolerate prose or code fences around the JSON
         try:
             return json.loads(m.group(0)) if m else {"grounded": False, "reason": "judge returned no JSON"}
         except json.JSONDecodeError:

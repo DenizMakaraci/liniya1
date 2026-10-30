@@ -78,6 +78,34 @@ Set `RIVA_SERVER=host:50051` to switch from the mock ASR to a Riva / Parakeet NI
 <- {"kind":"ended","data":{"summary":"...","audit":"<call_id>.jsonl"}}
 ```
 
+## Inbound mode: the AI answers the call
+
+Businesses can let the assistant answer incoming calls (overflow, after-hours, lead qualification,
+callback booking). Inbound calls are not "unsolicited telecommunications", so the CRTC consent and
+DNCL rules don't block them - but the AI must disclose itself, the recording, and (Quebec) the
+Law 25 notices, which it speaks itself and audits line by line.
+
+```bash
+.venv/bin/callpilot inbound-demo +15145550123 --script callback   # Quebec caller, books a callback
+.venv/bin/callpilot inbound-demo +16045550199 --script human      # asks for a person -> handoff
+.venv/bin/callpilot inbound-demo +16045550199 --script optout     # opts out -> internal DNCL
+.venv/bin/callpilot check +16045550199 --scrubbed                 # outbound now BLOCKED for that number
+```
+
+`InboundSession` (`src/callpilot/call/inbound.py`) handles: spoken mandatory opening,
+Nemotron Lightning replies (thinking off) through the same guardrail, barge-in (caller speech cancels
+in-flight TTS), silence timeout ("are you still there?"), human handoff (on request, regulated
+topics, repeated guardrail blocks, or the model's own `[HANDOFF]` tag), opt-out, and **callback
+consent capture**: when the AI asks permission to call back and the caller says yes, a
+`callback_request` consent record is written to memory and the audit log - which is exactly what the
+outbound gate needs to allow an automated callback later.
+
+- WebSocket: `/ws/inbound` (`{"type":"start","caller":"+1514..."}` then text or PCM16 frames).
+- Twilio: point a number's voice webhook at `POST /telephony/twilio/voice`; the TwiML opens a
+  bidirectional Media Stream to `/telephony/twilio/media` (mu-law 8 kHz <-> PCM16 16 kHz conversion
+  included) and falls through to `<Dial>` of your human line on handoff. Untested against live
+  Twilio; needs `RIVA_SERVER` for real ASR/TTS (Parakeet + Magpie).
+
 ## Running inside NemoClaw / OpenShell (Hermes Agent)
 
 - `nemoclaw/Dockerfile` - sandbox image; `nemoclaw/callpilot-policy.yaml` - intended OpenShell
@@ -96,12 +124,14 @@ Set `RIVA_SERVER=host:50051` to switch from the mock ASR to a Riva / Parakeet NI
 rules/                      legal rule KB (default, ca, ca-qc, us, eu) + approved_claims.txt
 src/callpilot/compliance/   jurisdiction, rules, engine (gate), guardrail, audit
 src/callpilot/llm/          Nebius client, fast path, slow path, legal RAG reasoner
-src/callpilot/call/         ASR (mock + Riva), prospect memory, CopilotSession orchestrator
+src/callpilot/call/         ASR/TTS (mock + Riva), prospect memory, CopilotSession (outbound,
+                            human speaks) and InboundSession (AI speaks)
+src/callpilot/telephony/    Twilio voice webhook + Media Streams bridge
 src/callpilot/tools/        Hermes/OpenAI tool schemas + MCP server
-src/callpilot/server.py     FastAPI REST + WebSocket
-src/callpilot/cli.py        check / ask / demo / serve
+src/callpilot/server.py     FastAPI REST + WebSockets (/ws/call, /ws/inbound)
+src/callpilot/cli.py        check / ask / demo / inbound-demo / serve
 nemoclaw/                   Dockerfile + OpenShell policy
-tests/                      24 tests for the compliance engine, guardrail and reasoner
+tests/                      33 tests: compliance engine, guardrail, reasoner, inbound session, G.711
 ```
 
 ## Extending the rule base

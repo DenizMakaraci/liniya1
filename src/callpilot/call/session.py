@@ -58,11 +58,7 @@ class CopilotSession:
     # -- lifecycle -------------------------------------------------------------------------
 
     async def prepare(self) -> CallPolicy:
-        if self.audit.is_internally_blocked(self.ctx.prospect_number):
-            self.policy = CallPolicy(allowed=False, jurisdiction="-", jurisdiction_description="-",
-                                     blocking_reasons=["prospect previously opted out (internal DNCL)"])
-        else:
-            self.policy = self.engine.evaluate(self.ctx)
+        self.policy = self.engine.evaluate(self.ctx)
         self.audit.policy_decided(self.policy)
         await self.events.put(SessionEvent("policy", self.policy))
 

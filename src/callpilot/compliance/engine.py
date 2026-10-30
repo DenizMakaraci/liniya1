@@ -41,6 +41,7 @@ class CallPolicy(BaseModel):
     warnings: list[str] = Field(default_factory=list)
     open_questions: list[str] = Field(default_factory=list)  # for slow-path reasoning
     opening_script: list[str] = Field(default_factory=list)  # ordered, must be said first
+    opening_disclosures: list[tuple[str, str]] = Field(default_factory=list)  # (obligation, text)
     obligations: set[str] = Field(default_factory=set)
     calling_window: str | None = None
     applied_rules: list[AppliedRule] = Field(default_factory=list)
@@ -50,15 +51,21 @@ class CallPolicy(BaseModel):
 
 
 class PolicyEngine:
-    def __init__(self, rulebook: RuleBook, company: dict[str, str]):
+    def __init__(self, rulebook: RuleBook, company: dict[str, str], is_internally_blocked=None):
         self.rulebook = rulebook
         self.company = company  # keys: company, address, phone, rep, product
+        self.is_internally_blocked = is_internally_blocked  # callable(number) -> bool
 
     def evaluate(self, ctx: CallContext, jurisdiction: Jurisdiction | None = None) -> CallPolicy:
         j = jurisdiction or detect_jurisdiction(ctx.prospect_number)
         rules = [r for r in self.rulebook.for_jurisdiction(j.rule_code) if r.matches(ctx)]
         policy = CallPolicy(allowed=True, jurisdiction=j.rule_code, jurisdiction_description=j.description)
         disclosures: dict[str, str] = {}  # obligation -> text, de-duplicated across jurisdictions
+
+        if (ctx.direction == "outbound" and self.is_internally_blocked
+                and self.is_internally_blocked(ctx.prospect_number)):
+            policy.blocking_reasons.append(
+                "[default.optout_honour] prospect previously asked not to be contacted (internal DNCL)")
 
         for r in rules:
             policy.applied_rules.append(self._cite(r))
@@ -76,7 +83,8 @@ class PolicyEngine:
                 if r.confidence != "unclear":
                     policy.warnings.append(f"[{r.id}] {r.summary}")
 
-        policy.opening_script = self._order_script(disclosures)
+        policy.opening_disclosures = self._order_script(disclosures)
+        policy.opening_script = [text for _, text in policy.opening_disclosures]
         policy.allowed = not policy.blocking_reasons
         return policy
 
@@ -142,7 +150,7 @@ class PolicyEngine:
         )
 
     @staticmethod
-    def _order_script(disclosures: dict[str, str]) -> list[str]:
+    def _order_script(disclosures: dict[str, str]) -> list[tuple[str, str]]:
         order = [
             "identify_caller_full", "identify_caller", "ai_disclosure", "recording_notice",
             "purpose_notice", "automated_decision_notice", "no_regulated_advice",
@@ -151,7 +159,7 @@ class PolicyEngine:
         # identify_caller_full supersedes identify_caller
         if "identify_caller_full" in disclosures:
             ranked = [kv for kv in ranked if kv[0] != "identify_caller"]
-        return [text for _, text in ranked]
+        return ranked
 
 
 class _Safe(dict):
@@ -178,6 +186,8 @@ def _same_number(a: str, b: str) -> bool:
 
 
 def make_engine(settings, rulebook: RuleBook, rep: str = "", product: str = "") -> PolicyEngine:
+    from .audit import AuditLog
+
     return PolicyEngine(
         rulebook,
         {
@@ -188,6 +198,7 @@ def make_engine(settings, rulebook: RuleBook, rep: str = "", product: str = "") 
             "rep": rep or "{rep}",
             "product": product or "{product}",
         },
+        is_internally_blocked=AuditLog(settings.data_dir, "_gate").is_internally_blocked,
     )
 
 

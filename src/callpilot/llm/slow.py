@@ -19,11 +19,11 @@ class SlowPath:
         self.client = client
         self.model = model or settings.slow_model
 
-    async def _run(self, system: str, user: str, max_tokens: int = 700) -> str:
+    async def _run(self, system: str, user: str, max_tokens: int = 700, think: bool = True) -> str:
         if self.client is None:
             return "(no LLM configured) Goal: book a 15-minute demo. Ask about current scheduling pain."
         return await complete(
-            self.client, self.model, think=True, temperature=0.2, max_tokens=max_tokens,
+            self.client, self.model, think=think, temperature=0.2, max_tokens=max_tokens,
             messages=[{"role": "system", "content": system}, {"role": "user", "content": user}],
         )
 
@@ -42,4 +42,4 @@ class SlowPath:
         turns = "\n".join(f"{t['speaker'].upper()}: {t['text']}" for t in transcript)
         return await self._run(
             "Summarize this sales call in 5 bullets: outcome, needs, objections, next step, "
-            "any consent or opt-out statements verbatim.", turns, max_tokens=300)
+            "any consent or opt-out statements verbatim.", turns, max_tokens=300, think=False)

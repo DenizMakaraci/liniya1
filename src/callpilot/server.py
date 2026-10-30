@@ -10,12 +10,13 @@ WS
   /ws/call                 live copilot: JSON control + text/binary audio frames in, events out
 """
 
+import asyncio
 import json
 
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from pydantic import BaseModel
 
-from .call import CopilotSession, ProspectMemory, make_asr
+from .call import CopilotSession, InboundSession, ProspectMemory, make_asr, make_tts
 from .compliance import AuditLog, CallContext, load_rulebook
 from .compliance.engine import make_engine
 from .config import settings
@@ -26,6 +27,10 @@ rulebook = load_rulebook(settings.rules_dir)
 memory = ProspectMemory(settings.data_dir)
 client = get_client()
 reasoner = LegalReasoner(rulebook, client)
+
+from .telephony import router as telephony_router
+
+app.include_router(telephony_router)
 
 
 class CheckRequest(BaseModel):
@@ -94,16 +99,7 @@ async def ws_call(ws: WebSocket):
     engine = make_engine(settings, rulebook, msg.get("rep", ""), msg.get("product", ""))
     session = CopilotSession(ctx, engine, reasoner, make_asr(), memory, client, msg.get("rep", "the rep"))
 
-    async def pump():
-        async for ev in session.stream():
-            data = ev.data.model_dump(mode="json") if isinstance(ev.data, BaseModel) else ev.data
-            if hasattr(data, "__dataclass_fields__"):
-                data = data.__dict__
-            await ws.send_json({"kind": ev.kind, "data": data})
-
-    import asyncio
-
-    pump_task = asyncio.create_task(pump())
+    pump_task = asyncio.create_task(_pump(ws, session))
     try:
         policy = await session.prepare()
         await session.start()
@@ -127,3 +123,57 @@ async def ws_call(ws: WebSocket):
     except WebSocketDisconnect:
         await session.end("disconnected")
         pump_task.cancel()
+
+
+@app.websocket("/ws/inbound")
+async def ws_inbound(ws: WebSocket):
+    """AI answers the call. Protocol:
+    client -> {"type":"start","caller":"+1514...","sector":"general","assistant":"Ada"}
+    client -> {"type":"text","text":"..."}            (typed caller turn / mock ASR)
+    client -> binary PCM16 16 kHz caller audio          (Riva)
+    client -> {"type":"hangup"}
+    server -> SessionEvents: policy, brief, speak{text,mandatory}, audio(bytes), transcript,
+              opt_out, handoff{reason,...}, ended{summary,outcome,consents}
+    """
+    await ws.accept()
+    msg = json.loads(await ws.receive_text())
+    if msg.get("type") != "start":
+        await ws.close(code=1003)
+        return
+    ctx = CallContext(direction="inbound", mode="autonomous", prospect_number=msg["caller"],
+                      audience=msg.get("audience", "unknown"), sector=msg.get("sector", "general"))
+    session = InboundSession(ctx, make_engine(settings, rulebook), reasoner, make_asr(), make_tts(),
+                             memory, client, msg.get("assistant", "Ada"))
+    pump_task = asyncio.create_task(_pump(ws, session))
+    try:
+        policy = await session.prepare()
+        await session.start()
+        if not policy.allowed:
+            await pump_task
+            await ws.close()
+            return
+        while not session.outcome:
+            frame = await ws.receive()
+            if frame.get("text") is not None:
+                m = json.loads(frame["text"])
+                if m["type"] == "text":
+                    await session.feed(m["text"].encode())
+                elif m["type"] == "hangup":
+                    await session.end("caller_hung_up")
+            elif frame.get("bytes"):
+                await session.feed(frame["bytes"])
+        await pump_task
+    except WebSocketDisconnect:
+        await session.end("disconnected")
+        pump_task.cancel()
+
+
+async def _pump(ws: WebSocket, session):
+    async for ev in session.stream():
+        if ev.kind == "audio":
+            await ws.send_bytes(ev.data)
+            continue
+        data = ev.data.model_dump(mode="json") if isinstance(ev.data, BaseModel) else ev.data
+        if hasattr(data, "__dataclass_fields__"):
+            data = data.__dict__
+        await ws.send_json({"kind": ev.kind, "data": data})

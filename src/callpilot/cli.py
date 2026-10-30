@@ -118,6 +118,63 @@ async def cmd_demo(a):
     return 0
 
 
+async def cmd_inbound_demo(a):
+    from .call import InboundSession, MockASR, MockTTS, ProspectMemory
+
+    rb = load_rulebook(settings.rules_dir)
+    ctx = CallContext(direction="inbound", mode="autonomous", prospect_number=a.number,
+                      audience=a.audience, sector=a.sector)
+    session = InboundSession(ctx, make_engine(settings, rb), LegalReasoner(rb, get_client()), MockASR(),
+                             MockTTS(), ProspectMemory(settings.data_dir), get_client(), silence_timeout=30)
+    scripts = {
+        "callback": ["Hi, I saw your ad about the scheduler. Does it work with Outlook?",
+                     "What does it cost?", "Is it true it cuts no-shows by 80 percent?",
+                     "Okay, can someone call me back tomorrow to set it up?", "Yes please, this number is fine.",
+                     "Thanks, bye."],
+        "human": ["Hi, I need to change my billing details.", "Can I speak to a real person please?"],
+        "optout": ["Who is this?", "Please remove my number and don't contact me again."],
+    }
+
+    async def drive():
+        policy = await session.prepare()
+        await session.start()
+        if not policy.allowed:
+            return
+        for line in scripts[a.script]:
+            if session.outcome:
+                break
+            await asyncio.sleep(1.0)
+            await session.feed(line.encode())
+            await asyncio.sleep(2.5 if get_client() else 0.3)
+        if not session.outcome:
+            await session.end("caller_hung_up")
+
+    asyncio.create_task(drive())
+    async for ev in session.stream():
+        if ev.kind == "policy":
+            _print_policy(ev.data)
+            print()
+        elif ev.kind == "brief":
+            print("--- Brief ---\n" + ev.data + "\n")
+        elif ev.kind == "transcript":
+            print(f"  caller > {ev.data.text}")
+        elif ev.kind == "speak":
+            tag = "AI (mandatory)" if ev.data.get("mandatory") else "AI"
+            print(f"  {tag:14}> {ev.data['text']}")
+            if ev.data.get("violations"):
+                print(f"                 guardrail: {ev.data['violations']}")
+        elif ev.kind in ("opt_out", "handoff"):
+            print(f"  ** {ev.kind.upper()}: {ev.data.get('reason') or ev.data.get('text')}")
+        elif ev.kind == "blocked":
+            print("Call blocked:", ev.data)
+        elif ev.kind == "ended":
+            print(f"\n--- Ended ({ev.data['outcome']}) --- audit: data/audit/{ev.data['audit']}")
+            if ev.data["consents"]:
+                print("Consent captured:", ev.data["consents"][0]["source"])
+            print(ev.data["summary"])
+    return 0
+
+
 def cmd_serve(a):
     import uvicorn
 
@@ -153,6 +210,12 @@ def main(argv=None):
     d = sub.add_parser("demo", help="scripted end-to-end call with mock ASR")
     call_args(d)
 
+    i = sub.add_parser("inbound-demo", help="AI answers a scripted inbound call (mock ASR/TTS)")
+    i.add_argument("number")
+    i.add_argument("--audience", default="unknown", choices=["consumer", "business", "unknown"])
+    i.add_argument("--sector", default="general")
+    i.add_argument("--script", default="callback", choices=["callback", "human", "optout"])
+
     s = sub.add_parser("serve")
     s.add_argument("--host", default="127.0.0.1")
     s.add_argument("--port", type=int, default=8000)
@@ -161,7 +224,8 @@ def main(argv=None):
     a = p.parse_args(argv)
     if a.cmd == "serve":
         return cmd_serve(a)
-    return asyncio.run({"check": cmd_check, "ask": cmd_ask, "demo": cmd_demo}[a.cmd](a))
+    cmds = {"check": cmd_check, "ask": cmd_ask, "demo": cmd_demo, "inbound-demo": cmd_inbound_demo}
+    return asyncio.run(cmds[a.cmd](a))
 
 
 if __name__ == "__main__":
