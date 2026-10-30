@@ -5,10 +5,11 @@ inside the audio loop. Produces the call brief and refreshes it as the conversat
 from ..config import settings
 from .client import complete
 
-BRIEF_SYSTEM = """You prepare a concise call brief for a sales rep. Use ONLY the provided prospect
-memory and approved product facts. Output sections: Goal, Prospect context (3 bullets max),
-Likely objections + responses (3 max), Questions to ask (3 max), Do-not-say (from compliance).
-Plain text, under 250 words."""
+BRIEF_SYSTEM = """You prepare a concise call brief. Use ONLY the provided company profile, prospect
+memory, approved facts and knowledge index. Output sections: Goal, Prospect context (3 bullets max),
+Likely objections or questions + responses (3 max), Questions to ask (3 max), Do-not-say (from
+compliance). For an INBOUND call the goal is to help the caller with what they called about, not to
+pitch. Plain text, under 250 words."""
 
 REFRESH_SYSTEM = """Update the call brief given the live transcript so far. Keep the same sections,
 keep it under 250 words, and add a 'Live read' section with the prospect's current stance."""
@@ -28,9 +29,12 @@ class SlowPath:
         )
 
     async def build_brief(self, prospect_memory: str, approved_claims: list[str],
-                          compliance_notes: str) -> str:
-        user = (f"PROSPECT MEMORY:\n{prospect_memory or '(first contact)'}\n\n"
+                          compliance_notes: str, company: str = "", knowledge_index: str = "",
+                          direction: str = "outbound") -> str:
+        user = (f"CALL DIRECTION: {direction}\n\nCOMPANY PROFILE:\n{company or '(not set)'}\n\n"
+                f"PROSPECT MEMORY:\n{prospect_memory or '(first contact)'}\n\n"
                 f"APPROVED FACTS:\n- " + "\n- ".join(approved_claims) +
+                f"\n\nKNOWLEDGE INDEX (topics the assistant can look up):\n{knowledge_index or '(none)'}"
                 f"\n\nCOMPLIANCE NOTES:\n{compliance_notes}")
         return await self._run(BRIEF_SYSTEM, user, think=False)
 

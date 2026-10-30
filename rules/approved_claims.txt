@@ -1,6 +1,0 @@
-# One approved product fact per line. The guardrail flags any factual/pricing claim not grounded here.
-# Replace with your real, legal-reviewed claims.
-Acme Scheduler reduces missed appointments by up to 30% based on our 2025 customer survey.
-Acme Scheduler integrates with Google Calendar and Outlook.
-Plans start at $49 per month; pricing details are at acme.example/pricing.
-There is a 14-day free trial; no credit card required.

@@ -110,6 +110,36 @@ outbound gate needs to allow an automated callback later.
   included) and falls through to `<Dial>` of your human line on handoff. Untested against live
   Twilio; needs `RIVA_SERVER` for real ASR/TTS (Parakeet + Magpie).
 
+## Onboarding a company's data
+
+There is no upload step: data goes from the company's files into the sandbox volume, and the only
+thing that ever leaves is the prompt to the inference endpoint. Five artifacts, all plain files:
+
+| Artifact | Where | Trust level | Used for |
+|---|---|---|---|
+| Company profile | `company.yaml` | read-only | identity in disclosures, handoff number, languages, DNCL registration, assistant name |
+| Approved facts | `knowledge/facts.md` | read-only, legal-reviewed | the only prices/stats/guarantees the AI may **assert**; ground truth for the guardrail judge |
+| Knowledge docs | `knowledge/docs/*.md,txt,pdf` | read-only | FAQs/policies the AI may **answer from**; chunked by heading, BM25-retrieved per caller turn |
+| Contacts | CSV -> `data/memory.sqlite` | rw | prospect profiles, history, **consent evidence** |
+| Suppression list | TXT/CSV -> `data/internal_dncl.txt` | rw | existing do-not-call numbers; blocks all outbound |
+
+```bash
+.venv/bin/callpilot knowledge "change billing details"       # profile, facts, retrieval test
+.venv/bin/callpilot import contacts examples/contacts.csv     # validates consent evidence
+.venv/bin/callpilot import suppression examples/suppression.txt
+.venv/bin/callpilot forget +14165550123                        # right to erasure
+```
+
+The contacts importer **rejects rows that claim consent without a date and a source** - the CRTC
+requires consent to be demonstrable, so undocumented consent is treated as none. Consent is also
+per-number: a `consent_number` that differs from `number` is rejected. Same endpoints over REST:
+`POST /import/contacts` (CSV body), `POST /import/suppression`, `GET /knowledge?q=...`; and as agent
+tools `knowledge_search` / `approved_facts`.
+
+The two knowledge tiers are deliberate: a price that appears only in a doc is still blocked by the
+guardrail until someone adds it to `facts.md`. Both folders are read-only inside OpenShell so the
+model cannot rewrite its own ground truth.
+
 ## Running inside NemoClaw / OpenShell (Hermes Agent)
 
 - `nemoclaw/Dockerfile` - sandbox image; `nemoclaw/callpilot-policy.yaml` - intended OpenShell
@@ -125,17 +155,21 @@ outbound gate needs to allow an automated callback later.
 ## Layout
 
 ```
-rules/                      legal rule KB (default, ca, ca-qc, us, eu) + approved_claims.txt
+rules/                      legal rule KB (default, ca, ca-qc, us, eu)
+knowledge/                  facts.md (approved claims) + docs/ (FAQs, policies)
+company.yaml                company profile
+examples/                   sample contacts.csv / suppression.txt (fictional)
 src/callpilot/compliance/   jurisdiction, rules, engine (gate), guardrail, audit
-src/callpilot/llm/          Nebius client, fast path, slow path, legal RAG reasoner
+src/callpilot/knowledge/    company profile, knowledge base + retrieval, CSV importers
+src/callpilot/llm/          inference client, fast path, speaker, slow path, legal RAG reasoner
 src/callpilot/call/         ASR/TTS (mock + Riva), prospect memory, CopilotSession (outbound,
                             human speaks) and InboundSession (AI speaks)
 src/callpilot/telephony/    Twilio voice webhook + Media Streams bridge
 src/callpilot/tools/        Hermes/OpenAI tool schemas + MCP server
 src/callpilot/server.py     FastAPI REST + WebSockets (/ws/call, /ws/inbound)
-src/callpilot/cli.py        check / ask / demo / inbound-demo / serve
+src/callpilot/cli.py        check / ask / demo / inbound-demo / import / knowledge / forget / serve
 nemoclaw/                   Dockerfile + OpenShell policy
-tests/                      33 tests: compliance engine, guardrail, reasoner, inbound session, G.711
+tests/                      43 tests: compliance engine, guardrail, reasoner, inbound session, knowledge, importers
 ```
 
 ## Extending the rule base

@@ -13,13 +13,14 @@ WS
 import asyncio
 import json
 
-from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, HTTPException, Request, WebSocket, WebSocketDisconnect
 from pydantic import BaseModel
 
 from .call import CopilotSession, InboundSession, ProspectMemory, make_asr, make_tts
 from .compliance import AuditLog, CallContext, load_rulebook
 from .compliance.engine import make_engine
 from .config import settings
+from .knowledge import import_contacts, import_suppression, load_kb, load_profile
 from .llm import LegalReasoner, get_client
 
 app = FastAPI(title="CallPilot", version="0.1.0")
@@ -79,6 +80,29 @@ def audit(call_id: str):
 def forget(number: str):
     memory.forget(number)
     return {"ok": True}
+
+
+@app.get("/knowledge")
+def knowledge(q: str | None = None):
+    kb, profile = load_kb(), load_profile()
+    out = {"company": profile.model_dump(), "stats": kb.stats, "facts": kb.facts}
+    if q:
+        out["retrieved"] = [c.__dict__ for c in kb.retrieve(q)]
+    return out
+
+
+@app.post("/import/contacts")
+async def import_contacts_ep(request: Request, region: str = "CA"):
+    """Body: raw CSV (text/csv). Rows claiming consent without date+source are rejected."""
+    rep = import_contacts((await request.body()).decode(), memory, region)
+    return rep.__dict__
+
+
+@app.post("/import/suppression")
+async def import_suppression_ep(request: Request, region: str = "CA"):
+    """Body: one number per line or CSV with a `number` column."""
+    rep = import_suppression((await request.body()).decode(), AuditLog(settings.data_dir, "_import"), region)
+    return rep.__dict__
 
 
 @app.websocket("/ws/call")

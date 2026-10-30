@@ -1,0 +1,18 @@
+# Who the assistant speaks for. Read-only to the agent; edit in git, not at runtime.
+# Fictional company for the demo - replace with yours.
+name: Acme Inc.
+legal_name: Acme Scheduling Software Inc.
+address: 123 Main St, Toronto, ON M5V 1A1
+callback_number: "+1 800 555 0100"      # quoted in every automated-call disclosure (CRTC Part IV s.4)
+handoff_number: "+1 416 555 0150"       # where a human picks up on transfer
+privacy_policy_url: https://acme.example/privacy
+privacy_officer_email: privacy@acme.example   # Quebec Law 25 s.3.1 designated person
+sector: general
+languages: [en, fr]
+dncl_registered: true
+dncl_registration_id: "DEMO-000000"
+assistant_name: Ada
+default_rep: Dana
+product: Acme Scheduler
+retention_days: 1095                    # CRTC: keep telemarketing records 3 years
+business_hours: Mon-Fri 9:00-17:00 Eastern

@@ -18,10 +18,9 @@ from fastapi import APIRouter, Request, WebSocket, WebSocketDisconnect
 from fastapi.responses import Response
 
 from ..config import settings
+from ..knowledge import load_profile
 
 router = APIRouter(prefix="/telephony/twilio", tags=["telephony"])
-
-HANDOFF_NUMBER = settings.callback_number  # where humans are reached; configure for production
 
 
 @router.post("/voice")
@@ -38,7 +37,7 @@ async def voice(request: Request):
     </Stream>
   </Connect>
   <Say>Connecting you to a colleague now.</Say>
-  <Dial>{HANDOFF_NUMBER}</Dial>
+  <Dial>{load_profile().handoff_number}</Dial>
 </Response>"""
     return Response(content=twiml, media_type="application/xml")
 

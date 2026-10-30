@@ -186,18 +186,11 @@ def _same_number(a: str, b: str) -> bool:
 
 
 def make_engine(settings, rulebook: RuleBook, rep: str = "", product: str = "") -> PolicyEngine:
+    from ..knowledge.profile import load_profile
     from .audit import AuditLog
 
     return PolicyEngine(
-        rulebook,
-        {
-            "company": settings.company_name,
-            "address": settings.company_address,
-            "phone": settings.callback_number,
-            "dncl_registered": settings.dncl_registered,
-            "rep": rep or "{rep}",
-            "product": product or "{product}",
-        },
+        rulebook, load_profile().disclosure_vars(rep, product),
         is_internally_blocked=AuditLog(settings.data_dir, "_gate").is_internally_blocked,
     )
 

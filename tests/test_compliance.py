@@ -172,7 +172,7 @@ def test_applied_rules_have_citations(engine):
 
 @pytest.fixture
 def guardrail(engine):
-    claims = Guardrail.load_claims(ROOT / "rules" / "approved_claims.txt")
+    claims = Guardrail.load_claims(ROOT / "knowledge" / "facts.md")
     return Guardrail(engine.evaluate(ctx(TORONTO)), claims)
 
 

@@ -11,6 +11,7 @@ from .compliance import CallContext, load_rulebook
 from .compliance.engine import make_engine
 from .compliance.models import ConsentEvidence
 from .config import settings
+from .knowledge import load_profile
 from .llm import LegalReasoner, get_client
 
 
@@ -79,7 +80,7 @@ async def cmd_demo(a):
                              LegalReasoner(rb, get_client()), MockASR(), ProspectMemory(settings.data_dir),
                              get_client(), a.rep)
     script = [
-        ("rep", f"Hi, this is {a.rep} calling from {settings.company_name}. This call is recorded for quality."),
+        ("rep", f"Hi, this is {a.rep} calling from {load_profile().name}. This call is recorded for quality."),
         ("prospect", "Okay, what is this about?"),
         ("rep", "We help clinics cut missed appointments. Do you handle scheduling?"),
         ("prospect", "We do, but we already use a tool. How much cheaper are you?"),
@@ -175,6 +176,45 @@ async def cmd_inbound_demo(a):
     return 0
 
 
+def cmd_import(a):
+    from pathlib import Path
+
+    from .call import ProspectMemory
+    from .compliance.audit import AuditLog
+    from .knowledge import import_contacts, import_suppression
+
+    if a.what == "contacts":
+        rep = import_contacts(Path(a.path), ProspectMemory(settings.data_dir), a.region)
+    else:
+        rep = import_suppression(Path(a.path), AuditLog(settings.data_dir, "_import"), a.region)
+    print(rep.summary())
+    return 0 if not rep.rejected else 1
+
+
+def cmd_knowledge(a):
+    from .knowledge import load_kb, load_profile
+
+    p, kb = load_profile(), load_kb()
+    print("Company profile:", settings.company_file, "(exists)" if settings.company_file.exists() else "(missing, using env)")
+    print(p.as_prompt())
+    print(f"\nKnowledge: {kb.stats}  ({settings.knowledge_dir})")
+    for f in kb.facts:
+        print(f"  fact: {f}")
+    if a.query:
+        print(f"\nRetrieval for {a.query!r}:")
+        for c in kb.retrieve(a.query):
+            print("  " + c.render().replace("\n", "\n  ")[:400])
+    return 0
+
+
+def cmd_forget(a):
+    from .call import ProspectMemory
+
+    ProspectMemory(settings.data_dir).forget(a.number)
+    print(f"erased {a.number} from memory (audit logs are retained as required by law)")
+    return 0
+
+
 def cmd_serve(a):
     import uvicorn
 
@@ -216,14 +256,26 @@ def main(argv=None):
     i.add_argument("--sector", default="general")
     i.add_argument("--script", default="callback", choices=["callback", "human", "optout"])
 
+    im = sub.add_parser("import", help="import contacts CSV or a suppression (do-not-call) list")
+    im.add_argument("what", choices=["contacts", "suppression"])
+    im.add_argument("path")
+    im.add_argument("--region", default="CA", help="default region for numbers without country code")
+
+    k = sub.add_parser("knowledge", help="show company profile, approved facts and test retrieval")
+    k.add_argument("query", nargs="?")
+
+    f = sub.add_parser("forget", help="erase a prospect from memory (right to erasure)")
+    f.add_argument("number")
+
     s = sub.add_parser("serve")
     s.add_argument("--host", default="127.0.0.1")
     s.add_argument("--port", type=int, default=8000)
     s.add_argument("--reload", action="store_true")
 
     a = p.parse_args(argv)
-    if a.cmd == "serve":
-        return cmd_serve(a)
+    sync = {"serve": cmd_serve, "import": cmd_import, "knowledge": cmd_knowledge, "forget": cmd_forget}
+    if a.cmd in sync:
+        return sync[a.cmd](a)
     cmds = {"check": cmd_check, "ask": cmd_ask, "demo": cmd_demo, "inbound-demo": cmd_inbound_demo}
     return asyncio.run(cmds[a.cmd](a))
 

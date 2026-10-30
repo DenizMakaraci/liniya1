@@ -19,6 +19,7 @@ from ..compliance import AuditLog, CallContext, Guardrail, PolicyEngine
 from ..compliance.engine import CallPolicy
 from ..compliance.guardrail import make_llm_judge
 from ..config import settings
+from ..knowledge import load_kb, load_profile
 from ..llm import FastPath, LegalReasoner, SlowPath
 from .asr import ASR
 from .memory import ProspectMemory
@@ -45,6 +46,8 @@ class CopilotSession:
 
     def __post_init__(self):
         self.audit = AuditLog(settings.data_dir, self.call_id)
+        self.profile = load_profile()
+        self.kb = load_kb()
         self.fast = FastPath(self.client)
         self.slow = SlowPath(self.client)
         self.transcript: list[dict] = []
@@ -66,12 +69,12 @@ class CopilotSession:
         await self.events.put(SessionEvent("legal", legal))
 
         if self.policy.allowed:
-            claims = Guardrail.load_claims(settings.approved_claims_file)
             judge = make_llm_judge(self.client, settings.fast_model) if self.client else None
-            self.guardrail = Guardrail(self.policy, claims, self.ctx.sector, judge)
+            self.guardrail = Guardrail(self.policy, self.kb.facts, self.ctx.sector, judge)
             self.brief = await self.slow.build_brief(
                 self.memory.as_text(self.ctx.prospect_number), self.guardrail.approved,
-                self._compliance_notes())
+                self._compliance_notes(), company=self.profile.as_prompt(),
+                knowledge_index=self.kb.overview(), direction=str(self.ctx.direction))
             await self.events.put(SessionEvent("brief", self.brief))
         return self.policy
 
@@ -151,7 +154,7 @@ class CopilotSession:
         """Mark opening-script obligations as satisfied when the rep actually says them."""
         t = rep_text.lower()
         checks = {
-            "identify_caller": settings.company_name.lower() in t,
+            "identify_caller": self.profile.name.lower() in t,
             "recording_notice": bool(re.search(r"\brecord", t)),
             "ai_disclosure": bool(re.search(r"\b(ai|artificial intelligence|automated|assistant)\b", t)),
             "purpose_notice": "privacy" in t,

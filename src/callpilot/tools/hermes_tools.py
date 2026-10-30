@@ -51,6 +51,15 @@ TOOLS = [
         "description": "Erase all data about a prospect (right to erasure / opt-out).",
         "parameters": {"type": "object", "properties": {"number": {"type": "string"}}, "required": ["number"]}}},
     {"type": "function", "function": {
+        "name": "knowledge_search",
+        "description": "Search the company's knowledge documents (FAQs, policies, service descriptions). "
+                       "Returns excerpts; prices/stats must still come from approved facts.",
+        "parameters": {"type": "object", "properties": {"query": {"type": "string"}}, "required": ["query"]}}},
+    {"type": "function", "function": {
+        "name": "approved_facts",
+        "description": "List the legally approved product facts the assistant may assert.",
+        "parameters": {"type": "object", "properties": {}}}},
+    {"type": "function", "function": {
         "name": "audit_get_call",
         "description": "Return the compliance audit log of a call.",
         "parameters": {"type": "object", "properties": {"call_id": {"type": "string"}}, "required": ["call_id"]}}},
@@ -87,6 +96,14 @@ async def dispatch(name: str, args: dict) -> dict:
     if name == "memory_forget_prospect":
         mem.forget(args["number"])
         return {"ok": True}
+    if name == "knowledge_search":
+        from ..knowledge import load_kb
+
+        return {"excerpts": [c.__dict__ for c in load_kb().retrieve(args["query"])]}
+    if name == "approved_facts":
+        from ..knowledge import load_kb
+
+        return {"facts": load_kb().facts}
     if name == "audit_get_call":
         return {"events": AuditLog(settings.data_dir, args["call_id"]).read()}
     raise ValueError(f"unknown tool {name}")

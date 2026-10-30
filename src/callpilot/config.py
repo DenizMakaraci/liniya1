@@ -27,11 +27,10 @@ class Settings(BaseSettings):
     callback_number: str = ""
     dncl_registered: bool = False
 
-    rules_dir: Path = ROOT / "rules"
-    data_dir: Path = ROOT / "data"
-
-    # Facts the LLM may assert about the product. Anything else is flagged by the guardrail.
-    approved_claims_file: Path = ROOT / "rules" / "approved_claims.txt"
+    rules_dir: Path = ROOT / "rules"  # legal rule KB (read-only to the agent)
+    knowledge_dir: Path = ROOT / "knowledge"  # facts.md (approved claims) + docs/ (read-only)
+    company_file: Path = ROOT / "company.yaml"  # who the assistant speaks for
+    data_dir: Path = ROOT / "data"  # memory, audit, internal DNCL (the only rw path)
 
 
 settings = Settings()

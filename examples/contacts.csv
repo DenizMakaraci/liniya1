@@ -1,0 +1,7 @@
+number,name,company,audience,sector,notes,consent_kind,consent_date,consent_source,consent_automated
++1 416 555 0123,Priya Shah,Lakeshore Dental,business,health,Office manager; asked about Outlook sync last year,,,,
++1 514 555 0123,Marc Tremblay,,consumer,general,Prefers French,,,,
++1 604 555 0142,Jordan Lee,Lee Physio,business,health,Filled web demo form,callback_request,2026-10-27T15:12:00-07:00,web form #4471 (acme.example/demo),true
++1 212 555 0123,Sam Ortiz,,consumer,general,,written,2026-09-01,,
++1 416 555 0199,Alex Kim,Kim Accounting,business,finance,Trial user since Oct,electronic,2026-10-20T10:00:00-04:00,trial signup checkbox v3,false
+555-0100,Bad Number,,consumer,,,,,,

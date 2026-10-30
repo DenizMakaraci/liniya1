@@ -41,6 +41,8 @@ filesystem:
     - /tmp
   read_only:
     - /sandbox/callpilot/rules      # legal rule KB; edits go through git, not the agent
+    - /sandbox/callpilot/knowledge  # approved facts + docs: the model must not rewrite its own ground truth
+    - /sandbox/callpilot/company.yaml
   deny:
     - /sandbox/callpilot/.env
 

@@ -28,6 +28,7 @@ from ..compliance.engine import CallPolicy
 from ..compliance.guardrail import make_llm_judge
 from ..compliance.models import ConsentEvidence
 from ..config import settings
+from ..knowledge import load_kb, load_profile
 from ..llm import LegalReasoner, SlowPath, Speaker
 from ..llm.speaker import split_tags
 from .asr import ASR
@@ -53,7 +54,7 @@ class InboundSession:
     tts: TTS
     memory: ProspectMemory
     client: Any = None
-    assistant_name: str = "Ada"
+    assistant_name: str = ""  # defaults to company.yaml assistant_name
     greeting: str = "How can I help you today?"
     silence_timeout: float = 12.0
     max_guardrail_failures: int = 2
@@ -63,7 +64,10 @@ class InboundSession:
         assert self.ctx.direction == "inbound" and self.ctx.mode == "autonomous", \
             "InboundSession is for AI-answered inbound calls"
         self.audit = AuditLog(settings.data_dir, self.call_id)
-        self.speaker = Speaker(self.client, assistant_name=self.assistant_name)
+        self.profile = load_profile()
+        self.kb = load_kb()
+        self.speaker = Speaker(self.client, assistant_name=self.assistant_name or self.profile.assistant_name,
+                               company_name=self.profile.name, kb=self.kb)
         self.slow = SlowPath(self.client)
         self.transcript: list[dict] = []
         self.policy: CallPolicy | None = None
@@ -87,12 +91,12 @@ class InboundSession:
         self.audit.policy_decided(self.policy)
         await self.events.put(SessionEvent("policy", self.policy))
         if self.policy.allowed:
-            claims = Guardrail.load_claims(settings.approved_claims_file)
             judge = make_llm_judge(self.client, settings.fast_model) if self.client else None
-            self.guardrail = Guardrail(self.policy, claims, self.ctx.sector, judge)
+            self.guardrail = Guardrail(self.policy, self.kb.facts, self.ctx.sector, judge)
             self.brief = await self.slow.build_brief(
                 self.memory.as_text(self.ctx.prospect_number), self.guardrail.approved,
-                self._compliance_notes())
+                self._compliance_notes(), company=self.profile.as_prompt(),
+                knowledge_index=self.kb.overview(), direction="inbound")
             await self.events.put(SessionEvent("brief", self.brief))
         return self.policy
 

@@ -62,8 +62,13 @@ class Guardrail:
         self.judge = llm_judge  # async callable(text, approved) -> dict
 
     @classmethod
-    def load_claims(cls, path: Path) -> list[str]:
-        return path.read_text().splitlines() if path.exists() else []
+    def load_claims(cls, path: Path | None = None) -> list[str]:
+        """Approved facts from knowledge/facts.md (or an explicit file)."""
+        from ..knowledge.kb import load_kb, parse_facts
+
+        if path is not None:
+            return parse_facts(path.read_text()) if path.exists() else []
+        return load_kb().facts
 
     def prospect_opted_out(self, transcript: str) -> bool:
         t = transcript.lower()

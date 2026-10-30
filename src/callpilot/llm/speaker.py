@@ -20,12 +20,13 @@ SYSTEM = """You are {assistant_name}, an AI phone assistant answering calls for 
 Speak naturally and briefly: 1-2 short sentences per turn, plain spoken language, no lists, no markdown.
 You already said the legally required opening (AI disclosure, recording notice); don't repeat it.
 
-What you can do: answer questions using ONLY the APPROVED FACTS, qualify the caller's need, take a
-message, and offer a callback or an appointment with a human.
+What you can do: answer questions using the APPROVED FACTS and the RELEVANT KNOWLEDGE excerpts,
+qualify the caller's need, take a message, and offer a callback or an appointment with a human.
 
 Rules:
-- Never invent prices, statistics, availability or guarantees. If a fact is not in APPROVED FACTS say
-  you'll have a colleague confirm it.
+- Prices, statistics, availability and guarantees may ONLY come from APPROVED FACTS. Use RELEVANT
+  KNOWLEDGE for how-to, policies and descriptions. If neither covers it, say you'll have a colleague
+  confirm it. Never invent.
 - Never give individual financial, insurance, medical or legal advice. Offer a licensed human instead.
 - If the caller asks for a human, is upset, or you are unsure twice in a row, hand off.
 - If the caller asks not to be contacted again, agree, confirm, and end.
@@ -38,24 +39,30 @@ when applicable; otherwise append nothing."""
 
 
 class Speaker:
-    def __init__(self, client, model: str | None = None, assistant_name: str = "Ada"):
+    def __init__(self, client, model: str | None = None, assistant_name: str = "Ada",
+                 company_name: str | None = None, kb=None):
         self.client = client
         self.model = model or settings.fast_model
         self.assistant_name = assistant_name
+        self.company_name = company_name or settings.company_name
+        self.kb = kb  # KnowledgeBase or None
 
     async def reply(self, brief: str, approved: list[str], compliance_notes: str,
                     transcript: list[dict], max_turns: int = 12) -> AsyncIterator[str]:
         if self.client is None:
-            yield _offline_reply(transcript)
+            yield _offline_reply(transcript, self.kb)
             return
         turns = "\n".join(f"{'CALLER' if t['speaker'] == 'caller' else 'YOU'}: {t['text']}"
                           for t in transcript[-max_turns:])
+        last_caller = next((t["text"] for t in reversed(transcript) if t["speaker"] == "caller"), "")
+        knowledge = self.kb.context_for(last_caller) if self.kb else ""
         user = (f"CALL BRIEF:\n{brief}\n\nAPPROVED FACTS:\n- " + "\n- ".join(approved) +
+                f"\n\nRELEVANT KNOWLEDGE:\n{knowledge or '(nothing relevant found)'}"
                 f"\n\nCOMPLIANCE NOTES:\n{compliance_notes}\n\nCONVERSATION:\n{turns}\n\nYOU:")
         stream = await self.client.chat.completions.create(
             model=self.model, stream=True, temperature=0.5, max_tokens=90,
             messages=[{"role": "system", "content": SYSTEM.format(
-                assistant_name=self.assistant_name, company=settings.company_name)},
+                assistant_name=self.assistant_name, company=self.company_name)},
                 {"role": "user", "content": user}],
             extra_body=NO_THINK,
         )
@@ -73,7 +80,7 @@ def split_tags(text: str) -> tuple[str, set[str]]:
     return text.strip(), tags
 
 
-def _offline_reply(transcript: list[dict]) -> str:
+def _offline_reply(transcript: list[dict], kb=None) -> str:
     last = next((t["text"].lower() for t in reversed(transcript) if t["speaker"] == "caller"), "")
     if re.search(r"\b(human|person|agent|someone real|representative)\b", last):
         return "Of course, let me connect you with a colleague. [HANDOFF]"
@@ -83,4 +90,7 @@ def _offline_reply(transcript: list[dict]) -> str:
         return "Great, a colleague will call you back on this number. Thanks for calling. [CALLBACK_OK]"
     if re.search(r"\b(bye|goodbye|that'?s all|thanks,? that'?s it)\b", last):
         return "Thanks for calling, have a good day. [END]"
+    if kb and (hits := kb.retrieve(last, k=1)):
+        first = hits[0].text.split("\n")[0]
+        return f"Here's what I can tell you: {first[:200]}"
     return "I can help with that. Could you tell me a bit more about what you need?"
